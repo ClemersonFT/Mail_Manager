@@ -70,7 +70,8 @@ public class EmailCleaner {
 
                 if (remetentes.stream().anyMatch(combined::contains)) {
                     message.setFlag(Flags.Flag.DELETED, true);
-                } deletedCount ++;
+                    deletedCount++;
+                }
             }
 
             folder.close(true);
