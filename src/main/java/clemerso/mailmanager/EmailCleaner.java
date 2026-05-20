@@ -60,20 +60,18 @@ public class EmailCleaner {
                 Address[] fromAddresses = message.getFrom();
                 if (fromAddresses == null || fromAddresses.length == 0) continue;
                 InternetAddress internetAddress = (InternetAddress) fromAddresses[0];
+                String senderEmail = internetAddress.getAddress().toLowerCase();
 
-                String senderEmail = internetAddress.getAddress();
-                String senderName = internetAddress.getPersonal();
-                String combined = (
-                        senderEmail + " " +
-                                (senderName != null ? senderName : "")
-                ).toLowerCase();
+                boolean shouldDelete = remetentes.stream()
+                        .anyMatch(r -> senderEmail.contains(r));
 
-                if (remetentes.stream().anyMatch(combined::contains)) {
+                if (shouldDelete) {
                     message.setFlag(Flags.Flag.DELETED, true);
                     deletedCount++;
+
+                    System.out.println("Deletando: " + senderEmail);
                 }
             }
-
             folder.close(true);
             store.close();
             System.out.println("Total deletado: " + deletedCount);
