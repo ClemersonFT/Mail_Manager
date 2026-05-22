@@ -12,6 +12,5 @@ public class MailmanagerApplication {
 		);
 		App app = new App();
 		app.start();
-
 	}
 }

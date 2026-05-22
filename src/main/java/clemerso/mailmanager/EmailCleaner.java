@@ -49,38 +49,90 @@ public class EmailCleaner {
                     password
             );
 
-            Folder folder = store.getFolder("[Gmail]/Todos os e-mails");
+            Folder folder =
+                    store.getFolder("INBOX");
             folder.open(Folder.READ_WRITE);
+            Folder trashFolder =
+                    store.getFolder("[Gmail]/Lixeira");
 
-            Message [] messages =
-                    folder.getMessages();
+            trashFolder.open(Folder.READ_WRITE);
 
-            int deletedCount = 0;
+            int total =
+                    folder.getMessageCount();
+
+            Message[] messages =
+                    folder.getMessages(
+                            Math.max(1, total - 499),
+                            total
+                    );
+
+            List<Message> toDelete =
+                    new ArrayList<>();
+
             for (Message message : messages) {
-                Address[] fromAddresses = message.getFrom();
-                if (fromAddresses == null || fromAddresses.length == 0) continue;
-                InternetAddress internetAddress = (InternetAddress) fromAddresses[0];
-                String senderEmail = internetAddress.getAddress().toLowerCase();
 
-                boolean shouldDelete = remetentes.stream()
-                        .anyMatch(r -> senderEmail.contains(r));
+                Address[] fromAddresses =
+                        message.getFrom();
+
+                if (
+                        fromAddresses == null
+                                || fromAddresses.length == 0
+                ) {
+                    continue;
+                }
+
+                InternetAddress internetAddress =
+                        (InternetAddress)
+                                fromAddresses[0];
+                String senderEmail =
+                        internetAddress.getAddress();
+                String senderName =
+                        internetAddress.getPersonal();
+
+                String combined =
+                        (senderEmail + " " +
+                                        (senderName != null ? senderName : "")
+                        ).toLowerCase();
+
+                boolean shouldDelete =
+                        remetentes.stream()
+                                .anyMatch(
+                                        r -> combined.contains(r)
+                                );
 
                 if (shouldDelete) {
-                    message.setFlag(Flags.Flag.DELETED, true);
-                    deletedCount++;
-
-                    System.out.println("Deletando: " + senderEmail);
+                    message.setFlag(
+                            Flags.Flag.SEEN,
+                            true
+                    );
+                    toDelete.add(message);
+                    System.out.println(
+                            "Marcado para mover: "
+                                    + combined
+                    );
                 }
             }
-            folder.close(true);
-            store.close();
-            System.out.println("Total deletado: " + deletedCount);
 
-        } catch (MessagingException e) {
+            if (!toDelete.isEmpty()) {
+                folder.copyMessages(
+                        toDelete.toArray(new Message[0]),
+                        trashFolder
+                );
+                System.out.println(
+                        "Total movido para lixeira: "
+                                + toDelete.size()
+                );
+            }
+
+            folder.close(true);
+            trashFolder.close(false);
+
+            store.close();
+        }catch (MessagingException e) {
+
             e.printStackTrace();
         }
     }
-
     public void cleanSpam(){
 
         try {
