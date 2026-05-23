@@ -50,7 +50,7 @@ public class EmailCleaner {
             );
 
             Folder folder =
-                    store.getFolder("INBOX");
+                    store.getFolder("[Gmail]/Todos os e-mails");
             folder.open(Folder.READ_WRITE);
             Folder trashFolder =
                     store.getFolder("[Gmail]/Lixeira");
