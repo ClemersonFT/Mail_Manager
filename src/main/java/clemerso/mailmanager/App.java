@@ -30,27 +30,20 @@ public class App {
                 break;
 
             case 2:
-
-                List<String> remetentes = new ArrayList<>();
+                List<String> keywords = new ArrayList<>();
                 String response;
 
                 do {
-                    System.out.print("Qual remetente deseja bloquear? ");
-                    String remetente = scanner.nextLine().trim().toLowerCase();
+                    System.out.print("Digite uma palavra-chave: ");
+                    String kw = scanner.nextLine().trim().toLowerCase();
+                    if (!kw.isEmpty()) keywords.add(kw);
 
-                    if (!remetente.isEmpty()) {
-                        remetentes.add(remetente);
-                    }
-
-                    System.out.print("Deseja adicionar outro? (s/n): ");
+                    System.out.print("Adicionar outra? (s/n): ");
                     response = scanner.nextLine().trim().toLowerCase();
-
                 } while (response.equals("s"));
 
                 emailCleaner = new EmailCleaner(email, password);
-                emailCleaner.addRemetentes(remetentes);
-                emailCleaner.cleanStores();
-
+                emailCleaner.cleanByKeywords(keywords);
                 break;
 
             case 3:
