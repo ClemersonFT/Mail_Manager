@@ -10,7 +10,19 @@ public class MailmanagerApplication {
 				MailmanagerApplication.class,
 				args
 		);
-		App app = new App();
-		app.start();
+
+		if (args.length > 0 && args[0].equals("--manual")) {
+			Config config = new Config("manual"); // pede PIN
+			App app = new App(config);
+			app.start();
+		} else {
+			Config config = new Config("auto"); // lê PIN do arquivo
+			EmailCleaner emailCleaner = new EmailCleaner(
+					config.getEmail(),
+					config.getPassword()
+			);
+			emailCleaner.autoClean();
+			emailCleaner.cleanSpam();
+		}
 	}
 }

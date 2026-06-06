@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+config.properties
+config/properties
+config/credentials.enc
+config/properties.enc

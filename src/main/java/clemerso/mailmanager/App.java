@@ -5,22 +5,26 @@ import java.util.List;
 import java.util.Scanner;
 
 public class App {
+
+    private final Config config;
+
+    public App(Config config) {
+        this.config = config;
+    }
+
     public void start() {
         Scanner scanner = new Scanner(System.in);
 
-        System.out.println("Digite seu email");
-        String email = scanner.nextLine();
-
-        System.out.println("Digite sua senha");
-        String password = scanner.nextLine();
+        String email = config.getEmail();
+        String password = config.getPassword();
 
         System.out.println("1 - Limpar spam");
-        System.out.println("2 - Limpar lojas");
-        System.out.println("3 - Cancelar");
+        System.out.println("2 - Limpar por palavra-chave");
+        System.out.println("3 - Listar por quantidade de emails enviados");
+        System.out.println("4 - Cancelar");
 
         int option = scanner.nextInt();
         scanner.nextLine();
-
 
         switch (option) {
 
@@ -47,8 +51,13 @@ public class App {
                 break;
 
             case 3:
+                emailCleaner = new EmailCleaner(email, password);
+                emailCleaner.topSenders();
+                break;
+
+            case 4:
                 System.out.println("Cancelado.");
                 break;
         }
     }
-    }
+}
