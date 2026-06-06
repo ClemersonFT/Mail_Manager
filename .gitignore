@@ -36,3 +36,4 @@ config.properties
 config/properties
 config/credentials.enc
 config/properties.enc
+config/pin.enc
