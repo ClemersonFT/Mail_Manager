@@ -18,6 +18,10 @@ public class MailConnection {
         props.put("mail.imap.host", "imap.gmail.com");
         props.put("mail.imap.port", "993");
         props.put("mail.imap.ssl.enable", "true");
+        props.put("mail.imap.timeout", "60000");
+        props.put("mail.imap.connectiontimeout", "60000");
+        props.put("mail.imaps.timeout", "60000");
+        props.put("mail.imaps.connectiontimeout", "60000");
 
         Store store = Session.getInstance(props).getStore("imaps");
         store.connect("imap.gmail.com", email, password);

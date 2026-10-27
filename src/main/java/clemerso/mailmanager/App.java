@@ -21,7 +21,8 @@ public class App {
         System.out.println("1 - Limpar spam");
         System.out.println("2 - Limpar por palavra-chave");
         System.out.println("3 - Listar por quantidade de emails enviados");
-        System.out.println("4 - Cancelar");
+        System.out.println("4 - Limpar por blacklist");
+        System.out.println("5 - Cancelar");
 
         int option = scanner.nextInt();
         scanner.nextLine();
@@ -56,6 +57,11 @@ public class App {
                 break;
 
             case 4:
+                emailCleaner = new EmailCleaner(email, password);
+                emailCleaner.autoClean();
+                break;
+
+            case 5:
                 System.out.println("Cancelado.");
                 break;
         }

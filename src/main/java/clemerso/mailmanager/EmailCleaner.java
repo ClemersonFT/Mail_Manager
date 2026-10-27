@@ -174,16 +174,25 @@ public class EmailCleaner {
 
                 if (confirm.equals("s")) {
                     Message[] deleteArray = toDelete.toArray(new Message[0]);
-
-                    allMail.setFlags(deleteArray, new Flags(Flags.Flag.SEEN), true);
-
-                    allMail.copyMessages(deleteArray, trash);
+                    int flagBatch = 100;
+                    for (int i = 0; i < deleteArray.length; i += flagBatch) {
+                        int end = Math.min(i + flagBatch, deleteArray.length);
+                        Message[] batch = Arrays.copyOfRange(deleteArray, i, end);
+                        allMail.setFlags(batch, new Flags(Flags.Flag.SEEN), true);
+                        allMail.copyMessages(batch, trash);
+                    }
                     System.out.println("Movidos para lixeira: " + toDelete.size());
 
+                    trash.close(false);
+                    trash.open(Folder.READ_WRITE);
+
                     Message[] trashMessages = trash.getMessages();
-                    allMail.setFlags(trashMessages, new Flags(Flags.Flag.DELETED), true); // mesma coisa aqui
+                    for (int i = 0; i < trashMessages.length; i += flagBatch) {
+                        int end = Math.min(i + flagBatch, trashMessages.length);
+                        Message[] batch = Arrays.copyOfRange(trashMessages, i, end);
+                        trash.setFlags(batch, new Flags(Flags.Flag.DELETED), true);
+                    }
                     trash.close(true);
-                    System.out.println("Lixeira esvaziada.");
 
                 } else {
                     System.out.println("Operação cancelada.");

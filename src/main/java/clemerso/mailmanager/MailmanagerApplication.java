@@ -11,18 +11,14 @@ public class MailmanagerApplication {
 				args
 		);
 
-		if (args.length > 0 && args[0].equals("--manual")) {
-			Config config = new Config("manual"); // pede PIN
-			App app = new App(config);
-			app.start();
-		} else {
-			Config config = new Config("auto"); // lê PIN do arquivo
-			EmailCleaner emailCleaner = new EmailCleaner(
-					config.getEmail(),
-					config.getPassword()
-			);
+		if (args.length > 0 && args[0].equals("--auto")) {
+			Config config = new Config("auto");
+			EmailCleaner emailCleaner = new EmailCleaner(config.getEmail(), config.getPassword());
 			emailCleaner.autoClean();
 			emailCleaner.cleanSpam();
+		} else {
+			Config config = new Config("manual");
+			new App(config).start();
 		}
 	}
 }

@@ -25,6 +25,14 @@ public class BlackList {
             "promocao",
             "promoção",
             "oferta",
-            "desconto"
+            "desconto",
+            "infojobs",
+            "outlier",
+            "Indeed",
+            "Camo,",
+            "DoNotReply",
+            "Talita",
+            "MANUAL",
+            "cathos"
     );
 }
