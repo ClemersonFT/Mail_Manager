@@ -6,6 +6,7 @@ public class BlackList {
 
     public static final List<String> SENDERS = List.of(
             "aliexpress",
+            "aliexpress",
             "shein",
             "shopee",
             "mercadolivre",
@@ -28,11 +29,16 @@ public class BlackList {
             "desconto",
             "infojobs",
             "outlier",
-            "Indeed",
-            "Camo,",
-            "DoNotReply",
-            "Talita",
-            "MANUAL",
+            "indeed",
+            "camo",
+            "talita",
+            "manual",
             "cathos"
+    );
+
+    public static final List<String> WHITELIST = List.of(
+            "univille",
+            "github",
+            "accounts.google"
     );
 }

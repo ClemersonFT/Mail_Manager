@@ -1,6 +1,9 @@
 package clemerso.mailmanager;
 
-import jakarta.mail.*;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
+import jakarta.mail.Store;
+
 import java.util.Properties;
 
 public class MailConnection {
@@ -8,20 +11,15 @@ public class MailConnection {
     private final String password;
 
     public MailConnection(String email, String password) {
-        this.email = email;
-        this.password = password;
+        this.email = email.trim();
+        this.password = password.replaceAll("\\s+", "");
     }
 
     public Store connect() throws MessagingException {
         Properties props = new Properties();
-        props.put("mail.store.protocol", "imaps");
-        props.put("mail.imap.host", "imap.gmail.com");
-        props.put("mail.imap.port", "993");
-        props.put("mail.imap.ssl.enable", "true");
-        props.put("mail.imap.timeout", "60000");
-        props.put("mail.imap.connectiontimeout", "60000");
         props.put("mail.imaps.timeout", "60000");
         props.put("mail.imaps.connectiontimeout", "60000");
+        props.put("mail.imaps.ssl.checkserveridentity", "true");
 
         Store store = Session.getInstance(props).getStore("imaps");
         store.connect("imap.gmail.com", email, password);

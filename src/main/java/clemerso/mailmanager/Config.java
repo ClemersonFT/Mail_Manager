@@ -1,103 +1,122 @@
 package clemerso.mailmanager;
 
-import javax.crypto.*;
-import javax.crypto.spec.*;
-import java.io.*;
-import java.nio.file.*;
-import java.security.*;
-import java.security.spec.*;
-import java.util.*;
+import javax.crypto.AEADBadTagException;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.Console;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.SecureRandom;
+import java.util.Scanner;
 
 public class Config {
 
-    private final Properties props = new Properties();
-    private static final File ENC_FILE = new File("config/credentials.enc");
-    private static final File PIN_FILE = new File("config/pin.enc");
+    private static final Path DIR = Path.of(System.getProperty("user.home"), ".mailmanager");
+    private static final Path ENC_FILE = DIR.resolve("credentials.enc");
 
-    public Config() {
-        this("auto");
+    private static final int SALT_LEN = 16;
+    private static final int IV_LEN = 12;
+    private static final int ITERATIONS = 600_000;
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    private final String email;
+    private final String password;
+
+    public Config(Scanner scanner) {
+        String data;
+        try {
+            data = load(scanner);
+        } catch (AEADBadTagException e) {
+            throw new RuntimeException("Senha mestra incorreta.");
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao carregar credenciais: " + e.getMessage(), e);
+        }
+
+        int nl = data.indexOf('\n');
+        this.email = data.substring(0, nl);
+        this.password = data.substring(nl + 1);
     }
 
-    public Config(String modo) {
-        try {
-            Scanner scanner = new Scanner(System.in);
+    private static String load(Scanner scanner) throws Exception {
+        if (!Files.exists(ENC_FILE)) {
+            // primeira vez - pede tudo
+            System.out.print("Email: ");
+            String email = scanner.nextLine().trim();
+            String password = readSecret(scanner, "Senha de app: ").replaceAll("\\s+", "");
+            String master = readSecret(scanner, "Crie uma senha mestra (mínimo 8 caracteres): ");
 
-            if (!ENC_FILE.exists()) {
-                // primeira vez - pede tudo
-                System.out.print("Email: ");
-                String email = scanner.nextLine().trim();
-
-                System.out.print("Senha de app: ");
-                String password = scanner.nextLine().trim();
-
-                System.out.print("Crie um PIN (mínimo 4 dígitos): ");
-                String pin = scanner.nextLine().trim();
-
-                String data = "email=" + email + "\npassword=" + password;
-
-                ENC_FILE.getParentFile().mkdirs();
-                Files.write(ENC_FILE.toPath(), encrypt(data, pin));
-                Files.write(PIN_FILE.toPath(), encrypt(pin, getMachineKey()));
-
-                props.load(new ByteArrayInputStream(data.getBytes()));
-                System.out.println("Credenciais salvas com segurança!");
-
-            } else if (modo.equals("auto")) {
-                byte[] encPin = Files.readAllBytes(PIN_FILE.toPath());
-                String pin = decrypt(encPin, getMachineKey());
-
-                byte[] encrypted = Files.readAllBytes(ENC_FILE.toPath());
-                props.load(new ByteArrayInputStream(decrypt(encrypted, pin).getBytes()));
-
-            } else {
-                System.out.print("Digite seu PIN: ");
-                String pin = scanner.nextLine().trim();
-
-                byte[] encrypted = Files.readAllBytes(ENC_FILE.toPath());
-                props.load(new ByteArrayInputStream(decrypt(encrypted, pin).getBytes()));
+            if (master.length() < 8) {
+                throw new IllegalArgumentException("Senha mestra muito curta.");
             }
 
-        } catch (Exception e) {
-            throw new RuntimeException("Erro ao carregar credenciais: " + e.getMessage());
+            String data = email + "\n" + password;
+            Files.createDirectories(DIR);
+            Files.write(ENC_FILE, encrypt(data, master));
+            System.out.println("Credenciais salvas com segurança!");
+            return data;
         }
+
+        String master = readSecret(scanner, "Digite sua senha mestra: ");
+        return decrypt(Files.readAllBytes(ENC_FILE), master);
     }
 
-    private byte[] encrypt(String data, String pin) throws Exception {
-        SecretKey key = deriveKey(pin);
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, key);
-        byte[] iv = cipher.getIV();
-        byte[] encrypted = cipher.doFinal(data.getBytes());
-        byte[] result = new byte[iv.length + encrypted.length];
-        System.arraycopy(iv, 0, result, 0, iv.length);
-        System.arraycopy(encrypted, 0, result, iv.length, encrypted.length);
-        return result;
+    // sem eco no terminal; na IDE cai pro Scanner
+    private static String readSecret(Scanner scanner, String prompt) {
+        Console console = System.console();
+        if (console != null) {
+            return new String(console.readPassword("%s", prompt)).trim();
+        }
+        System.out.print(prompt);
+        return scanner.nextLine().trim();
     }
 
-    private String decrypt(byte[] data, String pin) throws Exception {
-        SecretKey key = deriveKey(pin);
-        byte[] iv = Arrays.copyOfRange(data, 0, 16);
-        byte[] encrypted = Arrays.copyOfRange(data, 16, data.length);
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
-        return new String(cipher.doFinal(encrypted));
+    // arquivo = salt (16) + iv (12) + dados cifrados (GCM)
+    private static byte[] encrypt(String data, String master) throws Exception {
+        byte[] salt = new byte[SALT_LEN];
+        byte[] iv = new byte[IV_LEN];
+        RANDOM.nextBytes(salt);
+        RANDOM.nextBytes(iv);
+
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, deriveKey(master, salt), new GCMParameterSpec(128, iv));
+        byte[] encrypted = cipher.doFinal(data.getBytes(StandardCharsets.UTF_8));
+
+        return ByteBuffer.allocate(SALT_LEN + IV_LEN + encrypted.length)
+                .put(salt).put(iv).put(encrypted)
+                .array();
     }
 
-    private SecretKey deriveKey(String pin) throws Exception {
+    private static String decrypt(byte[] file, String master) throws Exception {
+        ByteBuffer buf = ByteBuffer.wrap(file);
+        byte[] salt = new byte[SALT_LEN];
+        byte[] iv = new byte[IV_LEN];
+        buf.get(salt);
+        buf.get(iv);
+        byte[] encrypted = new byte[buf.remaining()];
+        buf.get(encrypted);
+
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE, deriveKey(master, salt), new GCMParameterSpec(128, iv));
+        return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+    }
+
+    private static SecretKey deriveKey(String master, byte[] salt) throws Exception {
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        KeySpec spec = new PBEKeySpec(pin.toCharArray(), "mailmanager_salt".getBytes(), 65536, 256);
+        PBEKeySpec spec = new PBEKeySpec(master.toCharArray(), salt, ITERATIONS, 256);
         return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
     }
 
-    private String getMachineKey() {
-        return System.getProperty("user.name") + System.getenv("COMPUTERNAME");
-    }
-
     public String getEmail() {
-        return props.getProperty("email");
+        return email;
     }
 
     public String getPassword() {
-        return props.getProperty("password");
+        return password;
     }
 }

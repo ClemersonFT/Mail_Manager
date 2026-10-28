@@ -1,24 +1,11 @@
 package clemerso.mailmanager;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import java.util.Scanner;
 
-@SpringBootApplication
 public class MailmanagerApplication {
 	public static void main(String[] args) {
-		SpringApplication.run(
-				MailmanagerApplication.class,
-				args
-		);
-
-		if (args.length > 0 && args[0].equals("--auto")) {
-			Config config = new Config("auto");
-			EmailCleaner emailCleaner = new EmailCleaner(config.getEmail(), config.getPassword());
-			emailCleaner.autoClean();
-			emailCleaner.cleanSpam();
-		} else {
-			Config config = new Config("manual");
-			new App(config).start();
-		}
+		Scanner scanner = new Scanner(System.in);
+		Config config = new Config(scanner);
+		new App(config, scanner).start();
 	}
 }
